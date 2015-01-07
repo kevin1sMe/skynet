@@ -5,9 +5,11 @@ local max_client = 64
 skynet.start(function()
 	print("Server start")
 	local console = skynet.newservice("console")
-	skynet.newservice("debug_console",8000)
+--	skynet.newservice("debug_console",8000)
 	skynet.newservice("simpledb")
 	local watchdog = skynet.newservice("watchdog")
+    --初始化watchdog服务。调用它的CMD.start()函数，传递一些参数
+    print("main.lua|skynet.call(watchdog)")
 	skynet.call(watchdog, "lua", "start", {
 		port = 8888,
 		maxclient = max_client,

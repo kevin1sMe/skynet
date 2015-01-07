@@ -27,6 +27,7 @@ function REQUEST:handshake()
 end
 
 local function request(name, args, response)
+    print("agent.lua|request() name:"..name)
 	local f = assert(REQUEST[name])
 	local r = f(args)
 	if response then
@@ -35,6 +36,7 @@ local function request(name, args, response)
 end
 
 local function send_package(pack)
+    print("agent.lua|send_package()")
 	local size = #pack
 	local package = string.char(bit32.extract(size,8,8)) ..
 		string.char(bit32.extract(size,0,8))..
@@ -50,6 +52,7 @@ skynet.register_protocol {
 		return host:dispatch(msg, sz)
 	end,
 	dispatch = function (_, _, type, ...)
+        print("agent.lua|register_protocol|type:"..type)
 		if type == "REQUEST" then
 			local ok, result  = pcall(request, ...)
 			if ok then
@@ -67,21 +70,26 @@ skynet.register_protocol {
 }
 
 function CMD.start(gate, fd, proto)
+    print("agent.lua| CMD.start() enter|".." gate:"..gate.." fd:"..fd)
+
 	host = sproto.new(proto.c2s):host "package"
 	send_request = host:attach(sproto.new(proto.s2c))
-	skynet.fork(function()
-		while true do
-			send_package(send_request "heartbeat")
-			skynet.sleep(500)
-		end
-	end)
+	--skynet.fork(function()
+		--while true do
+			--send_package(send_request "heartbeat")
+            ----FIXME 临时调整间隔
+			--skynet.sleep(50000)
+		--end
+	--end)
 
 	client_fd = fd
 	skynet.call(gate, "lua", "forward", fd)
 end
 
 skynet.start(function()
+    --惯用法是在程序启动时，发个command=start过来，然后这里注册调用CMD.start()去初始化此服务
 	skynet.dispatch("lua", function(_,_, command, ...)
+        print("agent.lua| skynet.start() dispatch command:"..command)
 		local f = CMD[command]
 		skynet.ret(skynet.pack(f(...)))
 	end)

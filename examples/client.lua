@@ -13,10 +13,12 @@ local fd = assert(socket.connect("127.0.0.1", 8888))
 
 local function send_package(fd, pack)
 	local size = #pack
+    --两个字节包长度
 	local package = string.char(bit32.extract(size,8,8)) ..
 		string.char(bit32.extract(size,0,8))..
 		pack
 
+    print("client.lua|send_package() #pack:"..size)
 	socket.send(fd, package)
 end
 
@@ -30,6 +32,8 @@ local function unpack_package(text)
 		return nil, text
 	end
 
+    print("client.lua|unpack_package() #pkg len:"..s)
+
 	return text:sub(3,2+s), text:sub(3+s)
 end
 
@@ -37,6 +41,7 @@ local function recv_package(last)
 	local result
 	result, last = unpack_package(last)
 	if result then
+        print("client.lua|recv_package() result:"..(result or "nil"))
 		return result, last
 	end
 	local r = socket.recv(fd)
@@ -55,7 +60,7 @@ local function send_request(name, args)
 	session = session + 1
 	local str = request(name, args, session)
 	send_package(fd, str)
-	print("Request:", session)
+	print("client.lua|Request: session:"..session.." name:"..name)
 end
 
 local last = ""
