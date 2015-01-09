@@ -1,3 +1,5 @@
+--2015-01-09 修改使支持get/set/del 命令
+
 package.cpath = "luaclib/?.so"
 package.path = "lualib/?.lua;examples/?.lua"
 
@@ -106,11 +108,29 @@ end
 
 send_request("handshake")
 send_request("set", { what = "hello", value = "world" })
+--lua没有string.split(), 自己写一个
+string.split = function(s, sep)
+    local ret = {}
+    string.gsub(s, '[^'..sep..']+', function(w) table.insert(ret, w) end)
+    return ret
+end
+
 while true do
 	dispatch_package()
 	local cmd = socket.readstdin()
 	if cmd then
-		send_request("get", { what = cmd })
+        local input_argv = string.split(cmd, "%s")
+		--send_request("get", { what = cmd })
+        if input_argv[1] == "get" then
+            send_request("get", { what = input_argv[2] })
+        elseif input_argv[1] == "set" then
+            send_request("set", { what = input_argv[2], value = input_argv[3] })
+        elseif input_argv[1] == "del" then 
+            send_request("del", { what = input_argv[2]})
+        else
+            print("unknown cmd")
+        end
+
 	else
 		socket.usleep(100)
 	end

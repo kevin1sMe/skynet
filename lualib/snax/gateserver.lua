@@ -33,6 +33,7 @@ function gateserver.start(handler)
 
 	function CMD.open( source, conf )
 		assert(not socket)
+        print("gateserver.lua|CMD.open")
 		local address = conf.address or "0.0.0.0"
 		local port = assert(conf.port)
 		maxclient = conf.maxclient or 1024
@@ -80,6 +81,7 @@ function gateserver.start(handler)
 	MSG.more = dispatch_queue
 
 	function MSG.open(fd, msg)
+        print("gateserver.lua|MSG.open fd:"..fd)
 		if client_number >= maxclient then
 			socketdriver.close(fd)
 			return
@@ -129,6 +131,7 @@ function gateserver.start(handler)
 	}
 
 	skynet.start(function()
+        print("gateserver.lua|skynet.start")
 		skynet.dispatch("lua", function (_, address, cmd, ...)
 			local f = CMD[cmd]
 			if f then

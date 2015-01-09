@@ -13,6 +13,13 @@ function command.SET(key, value)
 	return last
 end
 
+--add for test
+function command.DEL(key)
+    local ret = db[key]
+    db[key] = nil
+    return ret
+end
+
 skynet.start(function()
 	skynet.dispatch("lua", function(session, address, cmd, ...)
 		local f = command[string.upper(cmd)]
