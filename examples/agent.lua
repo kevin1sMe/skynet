@@ -28,6 +28,12 @@ function REQUEST:del()
     return {result = r}
 end
 
+function REQUEST:size()
+    print("size")
+	local r = skynet.call("SIMPLEDB", "lua", "size")
+    return {result = r}
+end
+
 function REQUEST:handshake()
 	return { msg = "Welcome to skynet, I will send heartbeat every 5 sec." }
 end
