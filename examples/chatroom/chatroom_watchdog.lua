@@ -18,6 +18,9 @@ end
 local function close_agent(fd)
 	local a = agent[fd]
 	if a then
+        --玩家客户端断开，需要从房间列表中移除
+	    skynet.call(a, "lua", "close", fd)
+
 		skynet.kill(a)
 		agent[fd] = nil
 	end

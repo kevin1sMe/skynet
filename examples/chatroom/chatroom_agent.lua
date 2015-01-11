@@ -10,7 +10,9 @@ local send_request
 local CMD = {}
 local REQUEST = {}
 local client_fd
+local roomid
 
+--创建房间并返回房间号
 function REQUEST:create()
 	print("chatroom_agent.lua|create")
     if self then
@@ -19,8 +21,49 @@ function REQUEST:create()
         end
     end
 	local r = skynet.call("chatroom_db", "lua", "create", self)
+    roomid = r.roomid
+    print("chatroom_agent.lua|create and get roomid:"..(roomid or ""))
 	return r
 end
+
+function REQUEST:chat()
+	print("chatroom_agent.lua|chat")
+    if self then
+        for k,v in pairs(self) do
+            print(k, v)
+        end
+    end
+	local r = skynet.call("chatroom_db", "lua", "chat", self)
+	return r
+end
+
+function REQUEST:join()
+	print("chatroom_agent.lua|join")
+    if self then
+        for k,v in pairs(self) do
+            print(k, v)
+        end
+    end
+	local r = skynet.call("chatroom_db", "lua", "join", self)
+    if r.roomid then
+        roomid = r.roomid
+        print("chatroom_agent.lua|uin:"..client_fd.." join into room:"..roomid)
+    end
+	return r
+end
+
+
+function REQUEST:exit()
+	print("chatroom_agent.lua|exit")
+    if self then
+        for k,v in pairs(self) do
+            print(k, v)
+        end
+    end
+    local r = skynet.call("chatroom_db", "lua", "exit", {roomid = self.roomid, uin = self.uin})
+	return r
+end
+
 
 --function REQUEST:set()
 	--print("set", self.what, self.value)
@@ -43,10 +86,19 @@ end
     --return { msg = "Welcome to chatroom, I will sync chat msg every 5 sec." }
 --end
 
---这里解析client发过来的命令并作响应
+--这里解析client发过来的命令并作响应, 但这里的response是哪来的
 local function request(name, args, response)
     print("chatroom_agent.lua|request() name:"..name)
 	local f = assert(REQUEST[name])
+
+    args.uin = client_fd
+
+    if args.roomid == nil then 
+        args.roomid = roomid 
+    else
+        print("chatroom_agent.lua|request() name:"..name.." roomid is "..args.roomid)
+    end
+
 	local r = f(args)
 	if response then
         print("chatroom_agent.lua|request() response not nil")
@@ -102,16 +154,29 @@ function CMD.start(gate, fd, proto)
 
 	host = sproto.new(proto.c2s):host "package"
 	send_request = host:attach(sproto.new(proto.s2c))
-	--skynet.fork(function()
-		--while true do
-			--send_package(send_request "heartbeat")
-            ----FIXME 临时调整间隔
-			--skynet.sleep(50000)
-		--end
-	--end)
+
+    --定时同步聊天室的消息给各个客户端
+    skynet.fork(function()
+        while true do
+            --send_package(send_request "sync")
+            if roomid then
+    	        local r = skynet.call("chatroom_db", "lua", "sync", {roomid = roomid, uin = fd})
+                send_package(send_request("sync", r))
+            end
+            --FIXME 临时调整间隔
+            skynet.sleep(500)
+        end
+    end)
 
 	client_fd = fd
 	skynet.call(gate, "lua", "forward", fd)
+end
+
+function CMD.close(fd)
+    print("chatroom_agent.lua| CMD.close() fd:"..fd)
+    if roomid then
+	    local r = skynet.call("chatroom_db", "lua", "exit", {roomid = roomid, uin = fd})
+    end
 end
 
 skynet.start(function()

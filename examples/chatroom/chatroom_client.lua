@@ -113,23 +113,36 @@ string.split = function(s, sep)
     return ret
 end
 
+local function usage()
+    print("==========chatroom cmd list==========")
+    print("create           ->  to create a room, return roomid and msg")
+    print("chat msg         ->  chat in the room which you are joined or created, return 0 for succ ,otherwise failed and msg")
+    print("join roomid      ->  join in  room which you are joined or created, return 0 for succ ,otherwise failed and msg")
+end
+
 while true do
 	dispatch_package()
-	local cmd = socket.readstdin()
-	if cmd then
-        local input_argv = string.split(cmd, "%s")
-		--send_request("get", { what = cmd })
-        --if input_argv[1] == "get" then
-            --send_request("get", { what = input_argv[2] })
-        --elseif input_argv[1] == "set" then
-            --send_request("set", { what = input_argv[2], value = input_argv[3] })
-        --elseif input_argv[1] == "del" then 
-            --send_request("del", { what = input_argv[2]})
-        --elseif input_argv[1] == "size" then
-            --send_request("size")
-        if input_argv[1] == "create" then
-            print("chatroom_client.lua|recv a create room request...")
+	local input = socket.readstdin()
+	if input then
+        local input_argv = string.split(input, "%s")
+        assert(#input_argv > 0)
+        local cmd = input_argv[1]
+        if cmd == "create" then
+            print("chatroom_client.lua|recv a "..cmd.." room request...")
             send_request("create")
+        elseif cmd == "chat" then
+            print("chatroom_client.lua|recv a "..cmd.." room request...")
+            send_request("chat", {msg = input_argv[2]})
+        elseif cmd == "join" then
+            print("chatroom_client.lua|recv a "..cmd.." room request...")
+            if input_argv[2] == nil then
+                usage()
+            else
+                send_request("join", {roomid = input_argv[2]})
+            end
+        elseif cmd == "exit" then
+            print("chatroom_client.lua|recv a "..cmd.." room request...")
+            send_request("exit")
         else
             print("unknown cmd")
         end

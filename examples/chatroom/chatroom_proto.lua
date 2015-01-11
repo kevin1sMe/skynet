@@ -23,22 +23,24 @@ join 2 {
     }
     response {
         ret 0 : integer 
-        msg 1: string
+        roomid 1 : integer
+        msg 2: string
     }
 }
 
 chat 3 {
 	request {
-		msg 0 : string
+        roomid 0 : integer
+		msg 1 : string
 	}
 	response {
 		ret 0 : integer
+        msg 1 : string
 	}
 }
 
 exit 4 {
 	request {
-        roomid 0 : integer
 	}
     response {
         ret 0 : integer 
