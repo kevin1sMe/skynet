@@ -21,24 +21,21 @@ function command.create(req)
     print("chatroom_db.lua|create() req")
     local id = roomid
     roomid = roomid + 1
-    db[id] = { uin_list = { [req.uin] = 0}, 
-               msg_list = {uin = 10000, msg = "welcom to room "..id} 
-             }
+    db[id] = { uin_list = { [req.uin] = 0},  --初始化为0代表此玩家在本聊天室的记录游标为0
+               msg_list = { {uin = 10000, msg = "welcome to room "..id} } 
+           } 
     print("chatroom_db.lua|create room "..id)
     return {roomid = id, msg = "create room success!!"} 
 end
 
 function command.chat(req)
     print("chatroom_db.lua|chat() req")
-    if req then
-        for k,v in pairs(req) do
-            print(k,v)
-        end
+    if req.roomid == nil then
+        return {ret = -1, msg = "roomid is nil"}
     end
 
     if db[req.roomid] == nil then
-        return {ret = -1, 
-                msg = "cannot find roomid:"..req.roomid}
+        return {ret = -1, msg = "cannot find roomid:"..req.roomid}
     end
 
     table.insert(db[req.roomid].msg_list, {uin = req.uin , msg = req.msg})
@@ -48,12 +45,6 @@ end
 
 function command.join(req)
     print("chatroom_db.lua|join() req")
-    if req then
-        for k,v in pairs(req) do
-            print(k,v)
-        end
-    end
-
     local id = req.roomid
 
     --是否有此房间
@@ -62,16 +53,11 @@ function command.join(req)
     end
 
     --是否已经在房间中
-    --for _,v in pairs(db[id].uin_list) do
-        --if v == req.uin then
-            --return {ret = -2, msg = "uin "..req.uin.." is already in the room!"}
-        --end
-    --end
     if db[id].uin_list[req.uin] then
         return {ret = -2, msg = "uin "..req.uin.." is already in the room!"}
     end
 
-    --table.insert(db[req.roomid].uin_list, req.uin)
+    --初始进来设置消息游标为0
     db[req.roomid].uin_list[req.uin] = 0
     print("chatroom_db.lua|join() insert to chat room uin list success! room members:"..room.get_members(id))
     return { ret = 0, roomid = id,  msg = "join succ as "..req.uin} 
@@ -80,12 +66,6 @@ end
 
 function command.exit(req)
     print("chatroom_db.lua|exit() req")
-    if req then
-        for k,v in pairs(req) do
-            print(k,v)
-        end
-    end
-
     if req.roomid == nil then
         return {ret = -1, msg = "roomid is nil"}
     end
@@ -95,7 +75,6 @@ function command.exit(req)
     end
 
     --从成员列表中移除此玩家
-    --table.remove(db[req.roomid].uin_list, req.uin)
     if db[req.roomid].uin_list[req.uin] then
         db[req.roomid].uin_list[req.uin] = nil
         print("chatroom_db.lua|exit() from room "..req.roomid.." success!")
@@ -108,12 +87,6 @@ end
 
 function command.sync(req)
     print("chatroom_db.lua|sync() req")
-    if req then
-        for k,v in pairs(req) do
-            print(k,v)
-        end
-    end
-
     local id = req.roomid
     local uin = req.uin
 
@@ -133,7 +106,8 @@ function command.sync(req)
     local msg_sz = #db[id].msg_list
 
     --下发一条msg
-    local cur_msg_idx = db[id].uin_list[uin]
+    local cur_msg_idx = db[id].uin_list[uin] or 0
+    print("total msg_sz:"..msg_sz.." uin:"..uin.." current msg_idx:"..cur_msg_idx)
     if msg_sz > cur_msg_idx then
         db[id].uin_list[uin] = cur_msg_idx + 1
         return  {ret = 0, msg = db[id].msg_list[cur_msg_idx + 1].msg, uin = db[id].msg_list[cur_msg_idx + 1].uin}
@@ -145,7 +119,6 @@ end
 
 skynet.start(function()
 	skynet.dispatch("lua", function(session, address, cmd, ...)
-		--local f = command[string.upper(cmd)]
         local args = {...}
         for k,v in pairs(table.unpack(args)) do
             print("chatroom_db.lua|skynet.start() skynet.dispatch(lua) ", k, v)
