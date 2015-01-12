@@ -519,10 +519,11 @@ local function raw_dispatch_message(prototype, msg, sz, session, source, ...)
 			session_coroutine_id[co] = session
 			session_coroutine_address[co] = source
             print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." p.unpack:", p.unpack)
-            local args = {session, source, p.unpack(msg,sz, ...)}
-            for k,v in pairs(args) do
-                print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." resume params:", k, v)
-            end
+            --2015-01-12 这里p.unpack(msg,sz) 会释放msg, 不能先调用 ，否则后面调用指针就有问题了
+            --local args = {session, source, p.unpack(msg,sz, ...)}
+            --for k,v in pairs(args) do
+                --print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." resume params:", k, v)
+            --end
 			suspend(co, coroutine.resume(co, session,source, p.unpack(msg,sz, ...)))
 		else
             print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." unknown request")
