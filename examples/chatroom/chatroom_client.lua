@@ -18,7 +18,7 @@ local function send_package(fd, pack)
 		string.char(bit32.extract(size,0,8))..
 		pack
 
-    print("chatroom_client.lua|send_package() #pack:"..size)
+    --print("chatroom_client.lua|send_package() #pack:"..size)
 	socket.send(fd, package)
 end
 
@@ -32,7 +32,7 @@ local function unpack_package(text)
 		return nil, text
 	end
 
-    print("chatroom_client.lua|unpack_package() #pkg len:"..s)
+    --print("chatroom_client.lua|unpack_package() #pkg len:"..s)
 
 	return text:sub(3,2+s), text:sub(3+s)
 end
@@ -41,7 +41,7 @@ local function recv_package(last)
 	local result
 	result, last = unpack_package(last)
 	if result then
-        print("chatroom_client.lua|recv_package() result:"..(result or "nil"))
+        --print("chatroom_client.lua|recv_package() result:"..(result or "nil"))
 		return result, last
 	end
 	local r = socket.recv(fd)
@@ -60,13 +60,13 @@ local function send_request(name, args)
 	session = session + 1
 	local str = request(name, args, session)
 	send_package(fd, str)
-	print("chatroom_client.lua|Request: session:"..session.." name:"..name)
+	--print("chatroom_client.lua|Request: session:"..session.." name:"..name)
 end
 
 local last = ""
 
 local function print_request(name, args)
-	print("REQUEST", name)
+	--print("REQUEST", name)
 	if args then
 		for k,v in pairs(args) do
 			print(k,v)
@@ -75,7 +75,7 @@ local function print_request(name, args)
 end
 
 local function print_response(session, args)
-	print("RESPONSE", session)
+	--print("RESPONSE", session)
 	if args then
 		for k,v in pairs(args) do
 			print(k,v)
@@ -118,6 +118,7 @@ local function usage()
     print("create           ->  to create a room, return roomid and msg")
     print("chat msg         ->  chat in the room which you are joined or created, return 0 for succ ,otherwise failed and msg")
     print("join roomid      ->  join in  room which you are joined or created, return 0 for succ ,otherwise failed and msg")
+    print("exit             ->  exit room")
 end
 
 while true do
@@ -127,21 +128,22 @@ while true do
         local input_argv = string.split(input, "%s")
         assert(#input_argv > 0)
         local cmd = input_argv[1]
+        print("chatroom_client.lua|recv a "..cmd.." room request...")
         if cmd == "create" then
-            print("chatroom_client.lua|recv a "..cmd.." room request...")
             send_request("create")
         elseif cmd == "chat" then
-            print("chatroom_client.lua|recv a "..cmd.." room request...")
-            send_request("chat", {msg = input_argv[2]})
+            if input_argv[2] == nil then
+                usage()
+            else
+                send_request("chat", {msg = input_argv[2]})
+            end
         elseif cmd == "join" then
-            print("chatroom_client.lua|recv a "..cmd.." room request...")
             if input_argv[2] == nil then
                 usage()
             else
                 send_request("join", {roomid = input_argv[2]})
             end
         elseif cmd == "exit" then
-            print("chatroom_client.lua|recv a "..cmd.." room request...")
             send_request("exit")
         else
             print("unknown cmd")

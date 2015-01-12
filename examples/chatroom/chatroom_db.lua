@@ -135,16 +135,21 @@ function command.sync(req)
     --下发一条msg
     local cur_msg_idx = db[id].uin_list[uin]
     if msg_sz > cur_msg_idx then
+        db[id].uin_list[uin] = cur_msg_idx + 1
         return  {ret = 0, msg = db[id].msg_list[cur_msg_idx + 1].msg, uin = db[id].msg_list[cur_msg_idx + 1].uin}
     end
 
-    return { ret = 0, msg = "no more new msg.."}
+    return { ret = 1, msg = "no more new msg.."}
 end
 
 
 skynet.start(function()
 	skynet.dispatch("lua", function(session, address, cmd, ...)
 		--local f = command[string.upper(cmd)]
+        local args = {...}
+        for k,v in pairs(table.unpack(args)) do
+            print("chatroom_db.lua|skynet.start() skynet.dispatch(lua) ", k, v)
+        end
 		local f = command[cmd]
 		if f then
 			skynet.ret(skynet.pack(f(...)))

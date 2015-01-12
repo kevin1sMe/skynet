@@ -88,7 +88,7 @@ end
 
 --这里解析client发过来的命令并作响应, 但这里的response是哪来的
 local function request(name, args, response)
-    print("chatroom_agent.lua|request() name:"..name)
+    print("chatroom_agent.lua|enter request() name:"..name)
 	local f = assert(REQUEST[name])
 
     args.uin = client_fd
@@ -100,6 +100,14 @@ local function request(name, args, response)
     end
 
 	local r = f(args)
+    print("chatroom_agent.lua|request() name:"..name, " r ->", r)
+    print("skynet.pack() ->", skynet.pack)
+    print("skynet.unpack() ->", skynet.unpack)
+    print("table.pack() ->", table.pack)
+    print("table.unpack() ->", table.unpack)
+    print("netpack.pack() ->", netpack.pack)
+    print("netpack.unpack() ->", netpack.unpack)
+
 	if response then
         print("chatroom_agent.lua|request() response not nil")
         print(response)
@@ -126,17 +134,26 @@ skynet.register_protocol {
     print("chatroom_agent.lua|when ??"), 
 	name = "client",
 	id = skynet.PTYPE_CLIENT,
-	unpack = function (msg, sz) --sproto协议需要定义解码方法, 这里会先解码再dispatch吗? 是的，底层自动调用unpack先
+
+	unpack = function (msg, sz) --在收到PTYPE_CLIENT协议时，在skynet.lua/raw_dispatch_message方法会调用到这里
         print("chatroom_agent.lua|register_protocol unpack sz:"..sz)
+        --下面这个是host:dispatch()的返回值形式
+        --return "REQUEST", proto.name, result, gen_response(self, proto.response, header_tmp.session)
 		return host:dispatch(msg, sz)
 	end,
+    print("chatroom_agent.lua|PTYPE_CLIENT unpack:", unpack), 
 	dispatch = function (_, _, type, ...)
         print("chatroom_agent.lua|register_protocol|type:"..type)
+        local args = {...}
+        for k,v in pairs(args) do
+            print("chatroom_agent.lua|register_protocol|type:"..type, k,v)
+        end
 		if type == "REQUEST" then
 			local ok, result  = pcall(request, ...) --调用上面request()方法将参数传过去
 			if ok then
 				if result then
                     print("chatroom_agent.lua|register_protocol|result:"..(result or ""))
+                    print(result)
 					send_package(result)
 				end
 			else
@@ -161,9 +178,11 @@ function CMD.start(gate, fd, proto)
             --send_package(send_request "sync")
             if roomid then
     	        local r = skynet.call("chatroom_db", "lua", "sync", {roomid = roomid, uin = fd})
-                send_package(send_request("sync", r))
+                print("chatroom_agent.lua| CMD.start() r->", r) 
+                if r.ret ~= nil and r.ret ==0 then
+                    send_package(send_request("sync", r))
+                end
             end
-            --FIXME 临时调整间隔
             skynet.sleep(500)
         end
     end)

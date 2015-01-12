@@ -58,8 +58,9 @@ proto.s2c = sprotoparser.parse [[
 }
 
 sync 1 {
-    response {
-        msg 0 : string 
+    request {
+        uin 0: integer
+        msg 1 : string 
     }
 }
 ]]
