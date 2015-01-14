@@ -66,27 +66,49 @@ end
 local last = ""
 
 local function print_request(name, args)
-	--print("REQUEST", name)
-	if args then
-		for k,v in pairs(args) do
-			print(k,v)
-		end
-	end
+    print("REQUEST", name)
+    if args then
+        if type(args) == "table" then
+                print_table(args,0)
+        else
+            print(args)
+        end
+    end
 end
+
+function print_table(t, i)  
+    local indent ="" -- i缩进，当前调用缩进  
+    for j = 0, i do   
+        indent = indent .. "\t"  
+    end  
+    for k, v in pairs(t) do   
+        if (type(v) == "table") then -- type(v) 当前类型时否table 如果是，则需要递归，  
+            print(indent .. k.." = {")  
+            print_table(v, i + 1) -- 递归调用  
+            print(indent .. "}")  
+        else -- 否则直接输出当前值  
+            print(indent .. k .. "=" .. v .." ")  
+        end  
+    end  
+end  
 
 local function print_response(session, args)
 	--print("RESPONSE", session)
-	if args then
-		for k,v in pairs(args) do
-			print(k,v)
-		end
-	end
+    if args then
+        if type(args) == "table" then
+            print_table(args,0)
+        else
+            print(args)
+        end
+    end
 end
 
 local function print_package(t, ...)
 	if t == "REQUEST" then
+        print("print_package()|REQUEST")
 		print_request(...)
 	else
+        print("print_package()|RESPONSE")
 		assert(t == "RESPONSE")
 		print_response(...)
 	end

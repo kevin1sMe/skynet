@@ -57,10 +57,17 @@ proto.s2c = sprotoparser.parse [[
 	session 1 : integer
 }
 
+.Msg {
+    uin 0: integer
+    msg 1 : string 
+}
+
 sync 1 {
     request {
-        uin 0: integer
-        msg 1 : string 
+        msgs 0 : *Msg
+    }
+    response {
+        msgs 0 : *Msg 
     }
 }
 ]]

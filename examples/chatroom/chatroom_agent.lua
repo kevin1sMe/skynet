@@ -127,7 +127,8 @@ function CMD.start(gate, fd, proto)
     skynet.fork(function()
         while true do
             if roomid then
-    	        local r = skynet.call("chatroom_db", "lua", "sync", {roomid = roomid, uin = fd})
+                --send_package(send_request("sync", { msgs = {{msg = "sync msg1", uin = 1986} , {msg = "sync  msg2", uin = 1988} } } ))
+                local r = skynet.call("chatroom_db", "lua", "sync", {roomid = roomid, uin = fd})
                 if r.ret ~= nil and r.ret ==0 then
                     --注意这里虽然是主动回包给客户端，但其实proto.s2c这个sync应该是request才是，而不是response
                     --原因是send_request是host:attach()实现的，它的内部用了sproto.encode(proto.request, ...)

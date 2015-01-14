@@ -39,7 +39,7 @@ function command.chat(req)
     end
 
     table.insert(db[req.roomid].msg_list, {uin = req.uin , msg = req.msg})
-    print("chatroom_db.lua|chat() insert to chat list success!")
+    print("chatroom_db.lua|chat() insert to chat list success! msg size:"..#db[req.roomid].msg_list)
     return { ret = 0, msg = req.msg} 
 end
 
@@ -108,12 +108,21 @@ function command.sync(req)
     --下发一条msg
     local cur_msg_idx = db[id].uin_list[uin] or 0
     print("total msg_sz:"..msg_sz.." uin:"..uin.." current msg_idx:"..cur_msg_idx)
+    --if msg_sz > cur_msg_idx then
+        --db[id].uin_list[uin] = cur_msg_idx + 1
+        --return  {ret = 0, msg = db[id].msg_list[cur_msg_idx + 1].msg, uin = db[id].msg_list[cur_msg_idx + 1].uin}
+    --end
     if msg_sz > cur_msg_idx then
-        db[id].uin_list[uin] = cur_msg_idx + 1
-        return  {ret = 0, msg = db[id].msg_list[cur_msg_idx + 1].msg, uin = db[id].msg_list[cur_msg_idx + 1].uin}
+        local msgs = {}
+        for i = cur_msg_idx + 1, msg_sz do
+            table.insert(msgs, {msg = db[id].msg_list[i].msg, uin = db[id].msg_list[i].uin})
+        end
+        db[id].uin_list[uin] = msg_sz
+        print("send msg size:"..#msgs)
+        return { ret = 0, msgs = msgs }
+    else
+        return { ret = 1, msg = "no more new msg.."}
     end
-
-    return { ret = 1, msg = "no more new msg.."}
 end
 
 
