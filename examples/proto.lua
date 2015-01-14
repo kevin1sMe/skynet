@@ -30,6 +30,26 @@ set 3 {
 	}
 }
 
+del 4  {
+    request {
+        what 0: string 
+    }
+
+    response {
+        result 0: string
+    }
+}
+
+size 5 {
+    request {
+        what 0: string 
+    }
+
+    response {
+        result 0: integer 
+    }
+}
+
 ]]
 
 proto.s2c = sprotoparser.parse [[

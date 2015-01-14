@@ -1,8 +1,8 @@
-package.path = "./examples/?.lua;" .. package.path
+package.path = "./examples/chatroom/?.lua;" .. package.path
 
 local skynet = require "skynet"
 local netpack = require "netpack"
-local proto = require "proto"
+local proto = require "chatroom_proto"
 
 local CMD = {}
 local SOCKET = {}
@@ -11,13 +11,16 @@ local agent = {}
 
 function SOCKET.open(fd, addr)
 	skynet.error("New client from : " .. addr)
-	agent[fd] = skynet.newservice("agent")
+	agent[fd] = skynet.newservice("chatroom_agent")
 	skynet.call(agent[fd], "lua", "start", gate, fd, proto)
 end
 
 local function close_agent(fd)
 	local a = agent[fd]
 	if a then
+        --玩家客户端断开，需要从房间列表中移除
+	    skynet.call(a, "lua", "close", fd)
+
 		skynet.kill(a)
 		agent[fd] = nil
 	end
@@ -37,12 +40,12 @@ function SOCKET.data(fd, msg)
 end
 
 function CMD.start(conf)
-    print("watchdog.lua|CMD.start")
+    print("chatroom_watchdog.lua|CMD.start")
 	skynet.call(gate, "lua", "open" , conf)
 end
 
 skynet.start(function()
-    print("watchdog.lua|skynet.start")
+    print("chatroom_watchdog.lua|skynet.start")
 	skynet.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		if cmd == "socket" then
 			local f = SOCKET[subcmd]

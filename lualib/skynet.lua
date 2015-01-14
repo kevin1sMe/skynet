@@ -388,6 +388,12 @@ end
 skynet.genid = assert(c.genid)
 
 skynet.redirect = function(dest,source,typename,...)
+    print("skynet.lua|skynet.redirect()|typename:"..typename)
+    local args = {...}
+    for k,v in pairs(args) do
+        print("skynet.lua|skynet.redirect()|typename:"..typename, k, v)
+    end
+
 	return c.redirect(dest, source, proto[typename].id, ...)
 end
 
@@ -410,6 +416,7 @@ function skynet.call(addr, typename, ...)
 	if session == nil then
 		error("call to invalid address " .. skynet.address(addr))
 	end
+    print("skynet.lua|skynet.call() typename:"..typename)
 	return p.unpack(yield_call(addr, session))
 end
 
@@ -482,19 +489,24 @@ end
 
 local function raw_dispatch_message(prototype, msg, sz, session, source, ...)
 	-- skynet.PTYPE_RESPONSE = 1, read skynet.h
+    print("skynet.lua|raw_dispatch_message enter| prototype:"..prototype)
 	if prototype == 1 then
 		local co = session_id_coroutine[session]
+        print("skynet.lua|raw_dispatch_message| response|prototype:"..prototype.." co:", co)
 		if co == "BREAK" then
 			session_id_coroutine[session] = nil
 		elseif co == nil then
 			unknown_response(session, source, msg, sz)
 		else
 			session_id_coroutine[session] = nil
+            print("skynet.lua|raw_dispatch_message| response|prototype:"..prototype.." resume co:", co)
 			suspend(co, coroutine.resume(co, true, msg, sz))
 		end
 	else
 		local p = assert(proto[prototype], prototype)
 		local f = p.dispatch
+        print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." f->", f)
+
 		if f then
 			local ref = watching_service[source]
 			if ref then
@@ -503,10 +515,18 @@ local function raw_dispatch_message(prototype, msg, sz, session, source, ...)
 				watching_service[source] = 1
 			end
 			local co = co_create(f)
+            print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." coroutine create")
 			session_coroutine_id[co] = session
 			session_coroutine_address[co] = source
+            print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." p.unpack:", p.unpack)
+            --2015-01-12 这里p.unpack(msg,sz) 会释放msg, 不能先调用 ，否则后面调用指针就有问题了
+            --local args = {session, source, p.unpack(msg,sz, ...)}
+            --for k,v in pairs(args) do
+                --print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." resume params:", k, v)
+            --end
 			suspend(co, coroutine.resume(co, session,source, p.unpack(msg,sz, ...)))
 		else
+            print("skynet.lua|raw_dispatch_message|prototype:"..prototype.." unknown request")
 			unknown_request(session, source, msg, sz, proto[prototype])
 		end
 	end
