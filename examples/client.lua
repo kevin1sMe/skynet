@@ -1,3 +1,5 @@
+--2015-01-09 修改使支持get/set/del 命令
+
 package.cpath = "luaclib/?.so"
 package.path = "lualib/?.lua;examples/?.lua"
 
@@ -16,6 +18,8 @@ local fd = assert(socket.connect("127.0.0.1", 8888))
 
 local function send_package(fd, pack)
 	local package = string.pack(">s2", pack)
+    --两个字节包长度
+    print("client.lua|send_package() #pack:"..size)
 	socket.send(fd, package)
 end
 
@@ -29,6 +33,8 @@ local function unpack_package(text)
 		return nil, text
 	end
 
+    print("client.lua|unpack_package() #pkg len:"..s)
+
 	return text:sub(3,2+s), text:sub(3+s)
 end
 
@@ -36,6 +42,7 @@ local function recv_package(last)
 	local result
 	result, last = unpack_package(last)
 	if result then
+        print("client.lua|recv_package() result:"..(result or "nil"))
 		return result, last
 	end
 	local r = socket.recv(fd)
@@ -54,7 +61,7 @@ local function send_request(name, args)
 	session = session + 1
 	local str = request(name, args, session)
 	send_package(fd, str)
-	print("Request:", session)
+	print("client.lua|Request: session:"..session.." name:"..name)
 end
 
 local last = ""
@@ -100,15 +107,33 @@ end
 
 send_request("handshake")
 send_request("set", { what = "hello", value = "world" })
+--lua没有string.split(), 自己写一个
+string.split = function(s, sep)
+    local ret = {}
+    string.gsub(s, '[^'..sep..']+', function(w) table.insert(ret, w) end)
+    return ret
+end
+
 while true do
 	dispatch_package()
 	local cmd = socket.readstdin()
 	if cmd then
-		if cmd == "quit" then
-			send_request("quit")
-		else
-			send_request("get", { what = cmd })
-		end
+        local input_argv = string.split(cmd, "%s")
+		--send_request("get", { what = cmd })
+        if input_argv[1] == "get" then
+            send_request("get", { what = input_argv[2] })
+        elseif input_argv[1] == "set" then
+            send_request("set", { what = input_argv[2], value = input_argv[3] })
+        elseif input_argv[1] == "del" then 
+            send_request("del", { what = input_argv[2]})
+        elseif input_argv[1] == "size" then
+            send_request("size")
+        elseif input_argv[1] == "quit" then
+            send_request("quit")
+        else
+            print("unknown cmd")
+        end
+
 	else
 		socket.usleep(100)
 	end

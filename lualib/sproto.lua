@@ -181,6 +181,12 @@ local header_tmp = {}
 
 local function gen_response(self, response, session)
 	return function(args, ud)
+        print("sproto.lua|gen_response() response:",response, " args:", args)
+        if type(args) == "table" then
+            for k,v in pairs(args) do
+                print("sproto.lua|gen_response() kv:", k,v)
+            end
+        end
 		header_tmp.type = nil
 		header_tmp.session = session
 		header_tmp.ud = ud
@@ -195,7 +201,13 @@ local function gen_response(self, response, session)
 end
 
 function host:dispatch(...)
+    --print("sproto.lua|host:dispatch() enter")
+    --local args =  {...}
+    --for k,v in pairs(args) do
+        --print("sproto.lua|host:dispatch() args:", k, v)
+    --end
 	local bin = core.unpack(...)
+    --print("sproto.lua|host:dispatch() bin->", bin)
 	header_tmp.type = nil
 	header_tmp.session = nil
 	header_tmp.ud = nil
@@ -203,25 +215,31 @@ function host:dispatch(...)
 	local content = bin:sub(size + 1)
 	if header.type then
 		-- request
+        --print("sproto.lua|host:dispatch() header.type:"..header.type.." request")
 		local proto = queryproto(self.__proto, header.type)
 		local result
 		if proto.request then
+            --print("sproto.lua|host:dispatch() proto.request")
 			result = core.decode(proto.request, content)
 		end
 		if header_tmp.session then
+            --print("sproto.lua|host:dispatch() header_tmp.session proto.name:"..(proto.name or "nil"))
 			return "REQUEST", proto.name, result, gen_response(self, proto.response, header_tmp.session), header.ud
 		else
 			return "REQUEST", proto.name, result, nil, header.ud
 		end
 	else
 		-- response
+        --print("sproto.lua|host:dispatch() response")
 		local session = assert(header_tmp.session, "session not found")
 		local response = assert(self.__session[session], "Unknown session")
 		self.__session[session] = nil
 		if response == true then
+            --print("sproto.lua|host:dispatch() response == true")
 			return "RESPONSE", session, nil, header.ud
 		else
 			local result = core.decode(response, content)
+            --print("sproto.lua|host:dispatch() response:", response, " result:", result)
 			return "RESPONSE", session, result, header.ud
 		end
 	end
@@ -229,6 +247,7 @@ end
 
 function host:attach(sp)
 	return function(name, args, session, ud)
+        --print("sproto.lua|host:attach() name:"..name.." args:", args)
 		local proto = queryproto(sp, name)
 		header_tmp.type = proto.tag
 		header_tmp.session = session
@@ -240,9 +259,12 @@ function host:attach(sp)
 		end
 
 		if args then
+            --print("sproto.lua|host:attach() name:"..name.." args:", args, " before core.encode() proto.request:", proto.request)
 			local content = core.encode(proto.request, args)
+            --print("sproto.lua|host:attach() name:", name, " args:", args, "proto.request:", proto.request, "content:", content)
 			return core.pack(header ..  content)
 		else
+            --print("sproto.lua|host:attach() header:", header)
 			return core.pack(header)
 		end
 	end
